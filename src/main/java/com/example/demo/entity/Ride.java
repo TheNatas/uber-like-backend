@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.example.demo.entity.enums.PaymentMethod;
+
 @Entity
 @Table(name = "rides")
 @Data
@@ -92,6 +94,9 @@ public class Ride {
     
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+    
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
     
     @PrePersist
     protected void onCreate() {

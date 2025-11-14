@@ -4,6 +4,7 @@ import com.example.demo.dto.RideRequestDto;
 import com.example.demo.entity.Driver;
 import com.example.demo.entity.Ride;
 import com.example.demo.entity.User;
+import com.example.demo.entity.enums.PaymentMethod;
 import com.example.demo.exception.BadRequestException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.DriverRepository;
@@ -45,6 +46,7 @@ public class RideService {
         ride.setDestinationLatitude(rideRequestDto.getDestinationLatitude());
         ride.setDestinationLongitude(rideRequestDto.getDestinationLongitude());
         ride.setDestinationAddress(rideRequestDto.getDestinationAddress());
+        ride.setPaymentMethod(rideRequestDto.getPaymentMethod());
         ride.setStatus(Ride.Status.REQUESTED);
 
         // Calculate estimated fare and distance (simplified calculation)
@@ -111,6 +113,8 @@ public class RideService {
                 }
                 ride.setCompletedAt(LocalDateTime.now());
                 ride.setActualFare(ride.getEstimatedFare()); // Simplified
+                
+                Payment payment = paymentService.createPayment(ride, ride.getPaymentMethod());
                 
                 // Update driver status and stats
                 if (ride.getDriver() != null) {

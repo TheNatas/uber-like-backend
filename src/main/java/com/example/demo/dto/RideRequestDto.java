@@ -1,5 +1,7 @@
 package com.example.demo.dto;
 
+import com.example.demo.entity.enums.PaymentMethod;
+
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -21,4 +23,7 @@ public class RideRequestDto {
     private Double destinationLongitude;
     
     private String destinationAddress;
+    
+    @NotNull(message = "Payment method is required")
+    private PaymentMethod paymentMethod;
 }

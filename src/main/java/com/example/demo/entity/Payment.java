@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.example.demo.entity.enums.PaymentMethod;
 import com.example.demo.entity.enums.PaymentStatus;
@@ -22,23 +23,31 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    private Ride ride;
+    @OneToMany(mappedBy = "payment", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Ride> ride;
 
     @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
     private User passenger;
 
-    private BigDecimal amount;
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "number")
+    private String number;
+
+    @Column(name = "code")
+    private String code;
 
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
 
-    @Enumerated(EnumType.STRING)
-    private PaymentMethod method;
+    @Column(name = "expire_date")
+    private LocalDateTime expireDate;
 
-    private String providerTransactionId;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
-
-    private LocalDateTime completedAt;
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

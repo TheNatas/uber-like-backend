@@ -2,12 +2,14 @@ package com.example.demo.service;
 
 import com.example.demo.dto.RideRequestDto;
 import com.example.demo.entity.Driver;
+import com.example.demo.entity.Payment;
 import com.example.demo.entity.Ride;
 import com.example.demo.entity.User;
 import com.example.demo.entity.enums.PaymentMethod;
 import com.example.demo.exception.BadRequestException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.DriverRepository;
+import com.example.demo.repository.PaymentRepository;
 import com.example.demo.repository.RideRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class RideService {
     private final RideRepository rideRepository;
     private final UserRepository userRepository;
     private final DriverRepository driverRepository;
+    private final PaymentRepository paymentRepository;
 
     @Transactional
     public Ride requestRide(Long passengerId, RideRequestDto rideRequestDto) {
@@ -38,6 +41,16 @@ public class RideService {
             throw new BadRequestException("You already have an active ride");
         }
 
+        if (rideRequestDto.getPaymentMethod() == PaymentMethod.CREDIT_CARD && rideRequestDto.getPaymentId() == null)
+            throw new BadRequestException("No credit card selected");
+
+        Payment payment;
+        if (rideRequestDto.getPaymentMethod() == PaymentMethod.CREDIT_CARD)
+            payment = paymentRepository.findById(rideRequestDto.getPaymentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
+        else
+            payment = null;
+
         Ride ride = new Ride();
         ride.setPassenger(passenger);
         ride.setPickupLatitude(rideRequestDto.getPickupLatitude());
@@ -47,6 +60,7 @@ public class RideService {
         ride.setDestinationLongitude(rideRequestDto.getDestinationLongitude());
         ride.setDestinationAddress(rideRequestDto.getDestinationAddress());
         ride.setPaymentMethod(rideRequestDto.getPaymentMethod());
+        ride.setPayment(payment);
         ride.setStatus(Ride.Status.REQUESTED);
 
         // Calculate estimated fare and distance (simplified calculation)
@@ -107,22 +121,19 @@ public class RideService {
                 }
                 ride.setStartedAt(LocalDateTime.now());
                 break;
-            case COMPLETED:
+            case PENDING_PAYMENT:
                 if (ride.getStatus() != Ride.Status.IN_PROGRESS) {
                     throw new BadRequestException("Invalid status transition");
                 }
                 ride.setCompletedAt(LocalDateTime.now());
-                ride.setActualFare(ride.getEstimatedFare()); // Simplified
-                
-                Payment payment = paymentService.createPayment(ride, ride.getPaymentMethod());
-                
-                // Update driver status and stats
-                if (ride.getDriver() != null) {
-                    Driver driver = ride.getDriver();
-                    driver.setStatus(Driver.Status.ONLINE);
-                    driver.setTotalRides(driver.getTotalRides() + 1);
-                    driverRepository.save(driver);
+                ride.setActualFare(ride.getEstimatedFare());
+                status = CreditCardTransction(ride);
+                break;
+            case COMPLETED:
+                if (ride.getStatus() != Ride.Status.PENDING_PAYMENT && ride.getStatus() != Ride.Status.IN_PROGRESS) {
+                    throw new BadRequestException("Invalid status transition");
                 }
+                CompleteRide(ride);
                 break;
             case CANCELLED:
                 ride.setCancelledAt(LocalDateTime.now());
@@ -167,5 +178,28 @@ public class RideService {
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         
         return R * c; // Distance in km
+    }
+
+    private Ride.Status CreditCardTransction(Ride ride) {
+        if (ride.getPaymentMethod() != PaymentMethod.CREDIT_CARD)
+            return Ride.Status.PENDING_PAYMENT;
+
+        try {
+            //External Bank API transaction integration here
+            CompleteRide(ride);
+            return Ride.Status.COMPLETED;
+        }
+        catch (Exception e) {
+            return Ride.Status.PENDING_PAYMENT;
+        }
+    }
+
+    private void CompleteRide(Ride ride) {
+        if (ride.getDriver() != null) {
+            Driver driver = ride.getDriver();
+            driver.setStatus(Driver.Status.ONLINE);
+            driver.setTotalRides(driver.getTotalRides() + 1);
+            driverRepository.save(driver);
+        }
     }
 }

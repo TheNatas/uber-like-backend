@@ -96,7 +96,12 @@ public class Ride {
     private LocalDateTime updatedAt;
     
     @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", nullable = false)
     private PaymentMethod paymentMethod;
+
+    @ManyToOne
+    @JoinColumn(name = "payment_id", nullable = true)
+    private Payment payment;
     
     @PrePersist
     protected void onCreate() {
@@ -113,6 +118,6 @@ public class Ride {
     }
     
     public enum Status {
-        REQUESTED, ACCEPTED, DRIVER_ARRIVED, IN_PROGRESS, COMPLETED, CANCELLED
+        REQUESTED, ACCEPTED, DRIVER_ARRIVED, IN_PROGRESS, COMPLETED, CANCELLED, PENDING_PAYMENT
     }
 }

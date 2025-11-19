@@ -26,4 +26,6 @@ public class RideRequestDto {
     
     @NotNull(message = "Payment method is required")
     private PaymentMethod paymentMethod;
+
+    private Long paymentId;
 }

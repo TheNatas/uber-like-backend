@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.example.demo.entity.enums.PaymentMethod;
+
 @Entity
 @Table(name = "rides")
 @Data
@@ -93,6 +95,14 @@ public class Ride {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", nullable = false)
+    private PaymentMethod paymentMethod;
+
+    @ManyToOne
+    @JoinColumn(name = "payment_id", nullable = true)
+    private Payment payment;
+    
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -108,6 +118,6 @@ public class Ride {
     }
     
     public enum Status {
-        REQUESTED, ACCEPTED, DRIVER_ARRIVED, IN_PROGRESS, COMPLETED, CANCELLED
+        REQUESTED, ACCEPTED, DRIVER_ARRIVED, IN_PROGRESS, COMPLETED, CANCELLED, PENDING_PAYMENT
     }
 }

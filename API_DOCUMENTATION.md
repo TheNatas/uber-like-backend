@@ -16,279 +16,176 @@ This is a comprehensive Spring Boot backend application for an Uber-like ride-sh
 ### 1. User
 - Basic user information (name, email, phone, password)
 - User roles: PASSENGER, DRIVER, ADMIN
-- Relationship with Driver entity (one-to-one)
-- Relationship with Ride entity (one-to-many as passenger)
+# Documentação da API — Uber-like Backend
 
-### 2. Driver
-- Driver-specific information (license number, rating, status)
-- Current location tracking
-- Relationship with User entity (one-to-one)
-- Relationship with Vehicle entity (one-to-many)
-- Relationship with Ride entity (one-to-many)
+Esta documentação descreve a API atual do projeto, incluindo todos os endpoints expostos, exemplos de payloads (DTOs), fluxo de autenticação, informações sobre migrações e configuração de banco de dados. A aplicação usa Flyway para migrações e o banco deve ser configurado via `application.properties` (exemplos abaixo).
 
-### 3. Vehicle
-- Vehicle information (make, model, year, license plate)
-- Vehicle types: STANDARD, PREMIUM, SUV, ELECTRIC
-- Relationship with Driver entity (many-to-one)
+**Resumo das funcionalidades**
+- Autenticação com JWT
+- Controle de acesso por roles (ADMIN, DRIVER, PASSENGER)
+- Gestão de usuários, motoristas, veículos e corridas
+- Registro e gerenciamento de cartões de pagamento
+- Localização de motoristas por proximidade
+- Validação de entrada e tratamento global de erros
 
-### 4. Ride
-- Ride request and tracking information
-- Pickup and destination coordinates and addresses
-- Ride status tracking (REQUESTED, ACCEPTED, IN_PROGRESS, COMPLETED, CANCELLED)
-- Fare calculation and duration tracking
-- Relationship with User entity (many-to-one as passenger)
-- Relationship with Driver entity (many-to-one)
+**Entidades principais**
+- `User`: conta do usuário (nome, email, telefone, senha, roles, enabled)
+- `Driver`: dados do motorista (licenseNumber, status, localização atual)
+- `Vehicle`: veículo associado ao motorista (make, model, year, plate, type)
+- `Ride`: pedido/execução da corrida (pickup/destination, status, fare, payment)
+- `Payment`: dados de pagamento / cartão de crédito
 
-## API Endpoints
+## Endpoints
 
-### Public Endpoints (No Authentication Required)
+Base path: `/api`
 
-#### Health Check
-```
-GET /api/public/health
-```
-Returns application status and information.
+**Publicos (sem autenticação)**
+- GET `/api/public/health` — Retorna status da aplicação (status, timestamp, versão).
+- GET `/api/public/info` — Informações gerais da aplicação (features e entidades).
 
-#### Application Info
-```
-GET /api/public/info
-```
-Returns application features and entity information.
+**Autenticação (`/api/auth`)**
+- POST `/api/auth/register` — Registrar novo usuário
+  - Body (`UserRegistrationDto`):
+    {
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "phoneNumber": "+1234567890",
+      "password": "password123",
+      "role": "PASSENGER"
+    }
 
-### Authentication Endpoints
+- POST `/api/auth/login` — Login
+  - Body (`LoginDto`):
+    {
+      "email": "john.doe@example.com",
+      "password": "password123"
+    }
+  - Response: mapa com token JWT e dados básicos do usuário.
 
-#### User Registration
-```
-POST /api/auth/register
-Content-Type: application/json
+- POST `/api/auth/driver/register/{userId}` — Registrar usuário como motorista
+  - Path param: `userId` (Long)
+  - Body (`DriverRegistrationDto`):
+    {
+      "licenseNumber": "DL123456789",
+      "vehicleMake": "Toyota",
+      "vehicleModel": "Camry",
+      "vehicleYear": 2022,
+      "vehicleLicensePlate": "ABC123",
+      "vehicleColor": "Silver",
+      "vehicleType": "STANDARD"
+    }
 
-{
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "john.doe@example.com",
-  "phoneNumber": "+1234567890",
-  "password": "password123",
-  "role": "PASSENGER"
-}
-```
+**Usuários (`/api/users`)**
+- GET `/api/users` — Listar todos (ROLE_ADMIN)
+- GET `/api/users/{id}` — Obter usuário por id
+- PUT `/api/users/{id}/enable` — Alterna `enabled` do usuário (ROLE_ADMIN)
 
-#### Login
-```
-POST /api/auth/login
-Content-Type: application/json
+**Motoristas (`/api/drivers`)**
+- GET `/api/drivers` — Listar todos (ROLE_ADMIN)
+- GET `/api/drivers/{id}` — Obter motorista por id
+- GET `/api/drivers/online` — Listar motoristas online (ROLE_ADMIN)
+- PUT `/api/drivers/{id}/status?status={STATUS}` — Atualizar status (ROLE_DRIVER ou ADMIN)
+- PUT `/api/drivers/{id}/location?latitude={lat}&longitude={lon}` — Atualizar localização (ROLE_DRIVER ou ADMIN)
 
-{
-  "email": "john.doe@example.com",
-  "password": "password123"
-}
-```
+**Corridas (`/api/rides`)**
+- POST `/api/rides/request/{passengerId}` — Solicitar corrida (ROLE_PASSENGER ou ADMIN)
+  - Body (`RideRequestDto`):
+    {
+      "pickupLatitude": 40.7128,
+      "pickupLongitude": -74.0060,
+      "pickupAddress": "Origem",
+      "destinationLatitude": 40.7580,
+      "destinationLongitude": -73.9855,
+      "destinationAddress": "Destino",
+      "paymentMethod": "CARD", // enum PaymentMethod
+      "paymentId": 123 // opcional: id do cartão salvo
+    }
 
-#### Driver Registration (for existing users with DRIVER role)
-```
-POST /api/auth/driver/register/{userId}
-Content-Type: application/json
+- PUT `/api/rides/{rideId}/accept/{driverId}` — Motorista aceita corrida (ROLE_DRIVER)
+- PUT `/api/rides/{rideId}/status?status={STATUS}` — Atualizar status da corrida (ROLE_DRIVER)
+- GET `/api/rides/available` — Buscar corridas disponíveis (ROLE_DRIVER)
+- GET `/api/rides/history/{userId}?userType={PASSENGER|DRIVER}` — Histórico de corridas
+- GET `/api/rides/nearby-drivers?latitude={lat}&longitude={lon}&radiusKm={r}` — Motoristas próximos (ROLE_PASSENGER)
 
-{
-  "licenseNumber": "DL123456789",
-  "vehicleMake": "Toyota",
-  "vehicleModel": "Camry",
-  "vehicleYear": 2022,
-  "vehicleLicensePlate": "ABC123",
-  "vehicleColor": "Silver",
-  "vehicleType": "STANDARD"
-}
-```
+**Pagamento (`/api/payment`)**
+- POST `/api/payment/{userId}` — Inserir cartão/criar pagamento (ROLE_PASSENGER)
+  - Body (`CreditCardDto`):
+    {
+      "description": "Meu cartão",
+      "number": "4111111111111111",
+      "code": "123",
+      "expirationDate": "2026-12" // YearMonth
+    }
 
-### User Management Endpoints (Authenticated)
+- PATCH `/api/payment/cancel/{userId}/{creditCardId}` — Cancelar cartão (ROLE_PASSENGER)
+- GET `/api/payment/get-all/{userId}` — Listar cartões do usuário (ROLE_PASSENGER)
 
-#### Get All Users (Admin only)
-```
-GET /api/users
-Authorization: Bearer {jwt-token}
-```
+## DTOs principais
+- `UserRegistrationDto` — `firstName`, `lastName`, `email`, `phoneNumber`, `password`, `role` (default PASSENGER)
+- `LoginDto` — `email`, `password`
+- `DriverRegistrationDto` — `licenseNumber`, `vehicleMake`, `vehicleModel`, `vehicleYear`, `vehicleLicensePlate`, `vehicleColor`, `vehicleType`
+- `RideRequestDto` — `pickupLatitude`, `pickupLongitude`, `pickupAddress`, `destinationLatitude`, `destinationLongitude`, `destinationAddress`, `paymentMethod`, `paymentId`
+- `CreditCardDto` — `description`, `number`, `code`, `expirationDate` (YearMonth)
 
-#### Get User by ID
-```
-GET /api/users/{id}
-Authorization: Bearer {jwt-token}
-```
+## Fluxo de autenticação
+1. Registrar usuário (`/api/auth/register`) ou usar conta existente.
+2. Efetuar login (`/api/auth/login`) para receber token JWT.
+3. Incluir cabeçalho `Authorization: Bearer {jwt-token}` nas requisições protegidas.
 
-#### Toggle User Status (Admin only)
-```
-PUT /api/users/{id}/enable
-Authorization: Bearer {jwt-token}
-```
+## Tratamento de erros
+- 400 Bad Request — erros de validação e regras de negócio
+- 401 Unauthorized — falha de autenticação
+- 403 Forbidden — acesso não autorizado por role
+- 404 Not Found — recurso não encontrado
+- 500 Internal Server Error — erro inesperado
 
-### Driver Endpoints (Authenticated)
+Resposta de erro padrão inclui: status, tipo, mensagem, path e timestamp.
 
-#### Get All Drivers (Admin only)
-```
-GET /api/drivers
-Authorization: Bearer {jwt-token}
-```
+## Migrations e Banco de Dados
+- O projeto utiliza **Flyway** para migrações (localizações: `classpath:db/migration` e `classpath:com/example/demo/migration`).
+- Observação: **Não usamos H2** no fluxo atual. Configure seu banco relacional (PostgreSQL, MySQL, etc.) via `application.properties` antes de rodar a aplicação.
 
-#### Get Driver by ID
-```
-GET /api/drivers/{id}
-Authorization: Bearer {jwt-token}
-```
+Exemplo mínimo para PostgreSQL em `application.properties`:
 
-#### Get Online Drivers (Admin only)
 ```
-GET /api/drivers/online
-Authorization: Bearer {jwt-token}
-```
-
-#### Update Driver Status (Driver/Admin)
-```
-PUT /api/drivers/{id}/status?status=ONLINE
-Authorization: Bearer {jwt-token}
-```
-
-#### Update Driver Location (Driver/Admin)
-```
-PUT /api/drivers/{id}/location?latitude=40.7128&longitude=-74.0060
-Authorization: Bearer {jwt-token}
-```
-
-### Ride Endpoints (Authenticated)
-
-#### Request a Ride (Passenger/Admin)
-```
-POST /api/rides/request/{passengerId}
-Content-Type: application/json
-Authorization: Bearer {jwt-token}
-
-{
-  "pickupLatitude": 40.7128,
-  "pickupLongitude": -74.0060,
-  "pickupAddress": "New York, NY",
-  "destinationLatitude": 40.7580,
-  "destinationLongitude": -73.9855,
-  "destinationAddress": "Times Square, NY"
-}
+spring.datasource.url=jdbc:postgresql://localhost:5432/uberdb
+spring.datasource.username=seu_usuario
+spring.datasource.password=sua_senha
+spring.datasource.driverClassName=org.postgresql.Driver
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=validate
+spring.flyway.enabled=true
+spring.flyway.locations=classpath:db/migration,classpath:com/example/demo/migration
 ```
 
-#### Accept a Ride (Driver/Admin)
-```
-PUT /api/rides/{rideId}/accept/{driverId}
-Authorization: Bearer {jwt-token}
-```
+Se preferir MySQL, adapte a `url`, `driverClassName` e `hibernate.dialect` adequadamente.
 
-#### Update Ride Status (Driver/Admin)
-```
-PUT /api/rides/{rideId}/status?status=IN_PROGRESS
-Authorization: Bearer {jwt-token}
-```
+## Dados de amostra
+- A aplicação carrega dados iniciais via migrations/initializer (ver `DataInitializer`), incluindo um usuário ADMIN e alguns usuários/ motoristas de exemplo.
 
-#### Get Available Rides (Driver/Admin)
-```
-GET /api/rides/available
-Authorization: Bearer {jwt-token}
+## Como executar (local)
+1. Ajuste `application.properties` com as credenciais do banco desejado.
+2. Execute as migrations (Flyway roda automaticamente ao subir a aplicação).
+3. Rodar com Maven:
+
+```powershell
+mvnw.cmd spring-boot:run
 ```
 
-#### Get Ride History
-```
-GET /api/rides/history/{userId}?userType=PASSENGER
-Authorization: Bearer {jwt-token}
-```
+4. Teste o endpoint de saúde:
 
-#### Get Nearby Drivers (Passenger/Admin)
-```
-GET /api/rides/nearby-drivers?latitude=40.7128&longitude=-74.0060&radiusKm=5.0
-Authorization: Bearer {jwt-token}
+```powershell
+curl -X GET http://localhost:8080/api/public/health
 ```
 
-## Sample Data
+## Segurança
+- Autenticação com JWT (segredo e tempo de expiração configuráveis via `application.properties`)
+- Senhas criptografadas com BCrypt
+- Verificações de roles via `@PreAuthorize`
 
-The application initializes with the following sample data:
+## Observações finais / Próximos passos
+- Se quiser, atualizo também o `application.properties` de exemplo no repositório para refletir PostgreSQL (ou outro banco) e removo as propriedades do H2 — me diga qual SGBD prefere.
 
-### Admin User
-- **Email:** admin@uber.com
-- **Password:** admin123
-- **Role:** ADMIN
-
-### Passengers
-- **Email:** john.doe@email.com, **Password:** password123
-- **Email:** jane.smith@email.com, **Password:** password123
-
-### Drivers
-- **Email:** mike.johnson@email.com, **Password:** password123
-- **Email:** sarah.wilson@email.com, **Password:** password123
-
-## Running the Application
-
-1. **Start the application:**
-   ```bash
-   mvn spring-boot:run
-   ```
-
-2. **Access H2 Console (Development):**
-   - URL: http://localhost:8080/h2-console
-   - JDBC URL: jdbc:h2:mem:uberdb
-   - Username: sa
-   - Password: password
-
-3. **Test the API:**
-   ```bash
-   curl -X GET http://localhost:8080/api/public/health
-   ```
-
-## Authentication Flow
-
-1. **Register a new user** or use existing sample data
-2. **Login** to get JWT token
-3. **Include token** in Authorization header: `Bearer {jwt-token}`
-4. **Make authenticated requests** to protected endpoints
-
-## Error Handling
-
-The application includes comprehensive error handling:
-- **400 Bad Request:** Validation errors, business logic errors
-- **401 Unauthorized:** Authentication failures
-- **403 Forbidden:** Authorization failures
-- **404 Not Found:** Resource not found
-- **500 Internal Server Error:** Unexpected errors
-
-All error responses include:
-- HTTP status code
-- Error type
-- Detailed message
-- Request path
-- Timestamp
-- Validation details (when applicable)
-
-## Security Features
-
-- **JWT Token-based Authentication**
-- **Role-based Authorization**
-- **Password Encryption** (BCrypt)
-- **Request Validation**
-- **SQL Injection Prevention**
-- **CORS Configuration**
-
-## Database Schema
-
-The application automatically creates the following tables:
-- `users` - User account information
-- `drivers` - Driver-specific information
-- `vehicles` - Vehicle information
-- `rides` - Ride request and tracking data
-
-All tables include audit fields (created_at, updated_at) and proper foreign key relationships.
-
-## Configuration
-
-Key configuration in `application.properties`:
-- Database connection (H2 in-memory)
-- JWT secret and expiration
-- Security settings
-- Logging levels
-
-## Development Notes
-
-- The application uses H2 in-memory database for development
-- All passwords are encrypted using BCrypt
-- JWT tokens expire after 24 hours by default
-- The application includes comprehensive logging
-- Sample data is automatically loaded on startup
+---
+Arquivo(s) de migração usados: `src/main/resources/db/migration/V1__create_initial_schema.sql`, `src/main/resources/db/migration/V3__create_payments_table.sql` e migrações Java em `src/main/java/com/example/demo/migration`.

@@ -5,96 +5,187 @@ A comprehensive Spring Boot backend application for ride-sharing services with J
 ## Quick Start
 
 1. **Clone and run:**
-   ```bash
-   cd demo
+   # Uber-like Backend
+
+   README com instruções essenciais para rodar e testar o backend localmente.
+
+   **Resumo:** backend Spring Boot para um serviço tipo Uber com autenticação JWT, roles (ADMIN, DRIVER, PASSENGER), Flyway para migrações e endpoints para gerenciar usuários, motoristas, veículos, corridas e pagamentos.
+
+   **Importante:** configure um banco relacional e as credenciais em `src/main/resources/application.properties` antes de executar a aplicação (o projeto usa Flyway para migrações). Veja `API_DOCUMENTATION.md` para detalhes da API.
+
+   ## 1) Instruções para rodar o projeto (Windows / PowerShell)
+
+   1. Build e execução com o wrapper do Maven:
+
+   ```powershell
+   .\mvnw.cmd clean package
+   .\mvnw.cmd spring-boot:run
+   ```
+
+   2. Ou rodar diretamente com Maven (se instalado):
+
+   ```powershell
+   mvn clean package
    mvn spring-boot:run
    ```
 
-2. **Test the application:**
-   ```bash
-   curl http://localhost:8080/api/public/health
+   3. Verificar health:
+
+   ```powershell
+   curl -X GET http://localhost:8080/api/public/health
    ```
 
-3. **Login with sample data:**
+   Observação: Flyway executa migrações automaticamente na inicialização; garanta que o banco configurado esteja acessível.
+
+   ## 2) Estrutura de pastas (resumo)
+
+   Raiz do projeto (principais diretórios):
+
+   ```
+   /src
+      /main
+         /java/com/example/demo
+            /config           # Configurações e inicializadores
+            /controller       # Endpoints REST
+            /dto              # Objetos de requisição/resposta
+            /entity           # Entidades JPA
+            /exception        # Handler de erros personalizados
+            /migration        # Migrações Java (Flyway)
+            /repository       # Repositórios Spring Data JPA
+            /security         # JWT e configuração de segurança
+            /service          # Lógica de negócio
+         /resources
+            /db/migration     # Migrações SQL do Flyway
+            application.properties
+
+   bin/                  # cópias e utilitários (opcional)
+   README.md
+   API_DOCUMENTATION.md
+   ```
+
+   ## 3) Exemplo de requests e responses
+
+   1) Login (obter JWT)
+
+   Request:
+
    ```bash
    curl -X POST http://localhost:8080/api/auth/login \
-   -H "Content-Type: application/json" \
-   -d '{"email":"admin@uber.com","password":"admin123"}'
+      -H "Content-Type: application/json" \
+      -d '{"email":"admin@uber.com","password":"admin123"}'
    ```
 
-## Features
+   Success response (exemplo):
 
-✅ **4 Main Entities:** User, Driver, Vehicle, Ride  
-✅ **JWT Authentication & Authorization**  
-✅ **Role-based Access Control** (ADMIN, DRIVER, PASSENGER)  
-✅ **Global Exception Handling**  
-✅ **Input Validation**  
-✅ **Location-based Services**  
-✅ **Real-time Ride Tracking**  
-✅ **Comprehensive API Documentation**  
+   ```json
+   {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6...",
+      "user": {
+         "id": 1,
+         "email": "admin@uber.com",
+         "role": "ADMIN"
+      }
+   }
+   ```
 
-## Sample Accounts
+   2) Registrar usuário
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@uber.com | admin123 |
-| Passenger | john.doe@email.com | password123 |
-| Passenger | jane.smith@email.com | password123 |
-| Driver | mike.johnson@email.com | password123 |
-| Driver | sarah.wilson@email.com | password123 |
+   Request:
 
-## Key Endpoints
+   ```bash
+   curl -X POST http://localhost:8080/api/auth/register \
+      -H "Content-Type: application/json" \
+      -d '{"firstName":"John","lastName":"Doe","email":"john.doe@email.com","phoneNumber":"+1234567891","password":"password123"}'
+   ```
 
-- `GET /api/public/health` - Health check
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
-- `POST /api/rides/request/{passengerId}` - Request a ride
-- `PUT /api/rides/{rideId}/accept/{driverId}` - Accept a ride
-- `GET /api/rides/available` - Get available rides
+   Response (exemplo):
 
-## Technology Stack
+   ```json
+   {
+      "message": "User registered successfully",
+      "userId": 2
+   }
+   ```
 
-- **Spring Boot 3.5.6**
-- **Spring Security 6.5.5**
-- **Spring Data JPA**
-- **H2 Database**
-- **JWT Authentication**
-- **Hibernate 6.6.29**
-- **Maven**
-- **Java 17**
+   3) Solicitar corrida (exemplo)
 
-## Database Access
+   Request (use token obtido no login):
 
-- **H2 Console:** http://localhost:8080/h2-console
-- **JDBC URL:** jdbc:h2:mem:uberdb
-- **Username:** sa
-- **Password:** password
+   ```bash
+   curl -X POST http://localhost:8080/api/rides/request/2 \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer {jwt-token}" \
+      -d '{"pickupLatitude":40.7128,"pickupLongitude":-74.0060,"destinationLatitude":40.7580,"destinationLongitude":-73.9855,"paymentMethod":"CARD"}'
+   ```
 
-## Documentation
+   Response (exemplo):
 
-For detailed API documentation, see [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
+   ```json
+   {
+      "id": 10,
+      "passengerId": 2,
+      "status": "REQUESTED",
+      "pickupLatitude": 40.7128,
+      "pickupLongitude": -74.0060
+   }
+   ```
 
-## Project Structure
+   4) Motorista aceita corrida
 
-```
-src/main/java/com/example/demo/
-├── entity/          # JPA entities (User, Driver, Vehicle, Ride)
-├── repository/      # Data repositories
-├── service/         # Business logic
-├── controller/      # REST controllers
-├── dto/             # Data transfer objects
-├── security/        # Security configuration & JWT
-├── exception/       # Exception handling
-└── config/          # Configuration classes
-```
+   ```bash
+   curl -X PUT http://localhost:8080/api/rides/10/accept/1 \
+      -H "Authorization: Bearer {driver-jwt-token}"
+   ```
 
-## Architecture Highlights
+   Response (exemplo):
 
-- **Layered Architecture:** Controller → Service → Repository → Entity
-- **JWT Security:** Token-based authentication with role-based authorization
-- **Error Handling:** Global exception handler with detailed error responses
-- **Data Validation:** Comprehensive input validation using Bean Validation
-- **Location Services:** Haversine distance calculation for nearby drivers
-- **Audit Trail:** Automatic timestamps for all entities
+   ```json
+   {
+      "id": 10,
+      "driverId": 1,
+      "status": "ACCEPTED",
+      "acceptedAt": "2025-11-19T12:34:56"
+   }
+   ```
 
-This application demonstrates modern Spring Boot best practices and can serve as a foundation for building scalable ride-sharing or similar marketplace applications.
+   5) Inserir cartão de pagamento
+
+   ```bash
+   curl -X POST http://localhost:8080/api/payment/2 \
+      -H "Content-Type: application/json" \
+      -H "Authorization: Bearer {jwt-token}" \
+      -d '{"description":"Cartão John","number":"4111111111111111","code":"123","expirationDate":"2026-12"}'
+   ```
+
+   Response (exemplo):
+
+   ```json
+   {
+      "id": 1,
+      "passengerId": 2,
+      "status": "ACTIVE",
+      "description": "Cartão John"
+   }
+   ```
+
+   Observação: campos e formatos seguem os DTOs em `src/main/java/com/example/demo/dto`.
+
+   ## 4) Credenciais (dados de exemplo pré-carregados)
+
+   Use as contas abaixo para testes locais (senhas inseridas/hasheadas pelas migrações Java):
+
+   ```
+   Admin:    admin@uber.com / admin123
+   Passenger: john.doe@email.com / password123
+   Passenger: jane.smith@email.com / password123
+   Driver:   mike.johnson@email.com / password123
+   Driver:   sarah.wilson@email.com / password123
+   ```
+
+   ## 5) Notas adicionais
+   - Migrations: Flyway executa os arquivos em `src/main/resources/db/migration` e as migrações Java em `src/main/java/com/example/demo/migration`.
+   - Banco: ajuste `application.properties` para apontar para PostgreSQL/MySQL em vez do H2 (se aplicável).
+   - Quer que eu gere um arquivo `V4__insert_payments_and_sample_rides.sql` para popular `payments` e `rides` automaticamente? Diga qual opção prefere.
+
+   ---
+   Para mais detalhes sobre endpoints e payloads, veja `API_DOCUMENTATION.md`.

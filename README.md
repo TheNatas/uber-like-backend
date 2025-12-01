@@ -181,11 +181,4 @@ A comprehensive Spring Boot backend application for ride-sharing services with J
    Driver:   mike.johnson@email.com / password123
    Driver:   sarah.wilson@email.com / password123
    ```
-
-   ## 5) Notas adicionais
-   - Migrations: Flyway executa os arquivos em `src/main/resources/db/migration` e as migrações Java em `src/main/java/com/example/demo/migration`.
-   - Banco: ajuste `application.properties` para apontar para PostgreSQL/MySQL em vez do H2 (se aplicável).
-   - Quer que eu gere um arquivo `V4__insert_payments_and_sample_rides.sql` para popular `payments` e `rides` automaticamente? Diga qual opção prefere.
-
-   ---
-   Para mais detalhes sobre endpoints e payloads, veja `API_DOCUMENTATION.md`.
+   

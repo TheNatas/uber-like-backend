@@ -1,100 +1,102 @@
-# Uber-like Backend Application
+# Uber-like Backend — Documentação da API
 
-A comprehensive Spring Boot backend application for ride-sharing services with JWT authentication, role-based access control, and comprehensive error handling.
+## 1. Visão Geral
+Backend desenvolvido em **Spring Boot** para um serviço de transporte similar ao Uber.
+A aplicação oferece autenticação JWT, controle de acesso por roles, gerenciamento de usuários, motoristas, veículos, corridas e pagamentos, além de validação e tratamento global de erros.
 
-## Quick Start
+## 2. Tecnologias Principais
+- Java 22
+- Spring Boot 3.5.x
+- Spring Web / Data JPA / Security / Validation
+- JWT (jjwt)
+- Flyway
+- PostgreSQL
+- springdoc-openapi (Swagger)
 
-1. **Clone and run:**
-   ```bash
-   cd demo
-   mvn spring-boot:run
-   ```
+## 3. Entidades
+### User
+- Informações básicas, autenticação e roles.
 
-2. **Test the application:**
-   ```bash
-   curl http://localhost:8080/api/public/health
-   ```
+### Driver
+- Dados do motorista e localização.
 
-3. **Login with sample data:**
-   ```bash
-   curl -X POST http://localhost:8080/api/auth/login \
-   -H "Content-Type: application/json" \
-   -d '{"email":"admin@uber.com","password":"admin123"}'
-   ```
+### Vehicle
+- Veículo associado ao motorista.
 
-## Features
+### Ride
+- Corridas: origem, destino, status, motorista, passageiro e pagamento.
 
-✅ **4 Main Entities:** User, Driver, Vehicle, Ride  
-✅ **JWT Authentication & Authorization**  
-✅ **Role-based Access Control** (ADMIN, DRIVER, PASSENGER)  
-✅ **Global Exception Handling**  
-✅ **Input Validation**  
-✅ **Location-based Services**  
-✅ **Real-time Ride Tracking**  
-✅ **Comprehensive API Documentation**  
+### Payment
+- Cartões de crédito/métodos de pagamento.
 
-## Sample Accounts
+## 4. Autenticação
+Fluxo:
+1. Registro `/api/auth/register`
+2. Login `/api/auth/login`
+3. Usar `Authorization: Bearer {token}`
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@uber.com | admin123 |
-| Passenger | john.doe@email.com | password123 |
-| Passenger | jane.smith@email.com | password123 |
-| Driver | mike.johnson@email.com | password123 |
-| Driver | sarah.wilson@email.com | password123 |
+## 5. Endpoints Principais
+### Públicos
+- `GET /api/public/health`
+- `GET /api/public/info`
 
-## Key Endpoints
+### Autenticação
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/driver/register/{userId}`
 
-- `GET /api/public/health` - Health check
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
-- `POST /api/rides/request/{passengerId}` - Request a ride
-- `PUT /api/rides/{rideId}/accept/{driverId}` - Accept a ride
-- `GET /api/rides/available` - Get available rides
+### Usuários
+- `GET /api/users`
+- `GET /api/users/{id}`
+- `PUT /api/users/{id}/enable`
 
-## Technology Stack
+### Motoristas
+- `GET /api/drivers`
+- `PUT /api/drivers/{id}/status`
+- `PUT /api/drivers/{id}/location`
+- `GET /api/drivers/online`
 
-- **Spring Boot 3.5.6**
-- **Spring Security 6.5.5**
-- **Spring Data JPA**
-- **H2 Database**
-- **JWT Authentication**
-- **Hibernate 6.6.29**
-- **Maven**
-- **Java 17**
+### Corridas
+- `POST /api/rides/request/{passengerId}`
+- `PUT /api/rides/{rideId}/accept/{driverId}`
+- `PUT /api/rides/{rideId}/status`
+- `GET /api/rides/available`
+- `GET /api/rides/history/{userId}`
+- `GET /api/rides/nearby-drivers`
 
-## Database Access
+### Pagamentos
+- `POST /api/payment/{userId}`
+- `PATCH /api/payment/cancel/{userId}/{creditCardId}`
+- `GET /api/payment/get-all/{userId}`
 
-- **H2 Console:** http://localhost:8080/h2-console
-- **JDBC URL:** jdbc:h2:mem:uberdb
-- **Username:** sa
-- **Password:** password
+## 6. DTOs
+Inclui UserRegistrationDto, LoginDto, DriverRegistrationDto, RideRequestDto e CreditCardDto.
 
-## Documentation
+## 7. Tratamento de Erros
+Códigos utilizados:
+- 400, 401, 403, 404, 500
 
-For detailed API documentation, see [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
+Erro padrão inclui: status, mensagem, path, timestamp e details.
 
-## Project Structure
+## 8. Banco de Dados
+Flyway habilitado por padrão.
+Exemplo para PostgreSQL:
 
 ```
-src/main/java/com/example/demo/
-├── entity/          # JPA entities (User, Driver, Vehicle, Ride)
-├── repository/      # Data repositories
-├── service/         # Business logic
-├── controller/      # REST controllers
-├── dto/             # Data transfer objects
-├── security/        # Security configuration & JWT
-├── exception/       # Exception handling
-└── config/          # Configuration classes
+spring.datasource.url=jdbc:postgresql://localhost:5432/uberdb
+spring.datasource.username=usuario
+spring.datasource.password=senha
+spring.jpa.hibernate.ddl-auto=validate
+spring.flyway.enabled=true
+spring.flyway.locations=classpath:db/migration
 ```
 
-## Architecture Highlights
+## 9. Execução
+```
+mvn spring-boot:run
+```
 
-- **Layered Architecture:** Controller → Service → Repository → Entity
-- **JWT Security:** Token-based authentication with role-based authorization
-- **Error Handling:** Global exception handler with detailed error responses
-- **Data Validation:** Comprehensive input validation using Bean Validation
-- **Location Services:** Haversine distance calculation for nearby drivers
-- **Audit Trail:** Automatic timestamps for all entities
-
-This application demonstrates modern Spring Boot best practices and can serve as a foundation for building scalable ride-sharing or similar marketplace applications.
+Swagger UI:
+```
+http://localhost:8080/swagger-ui/index.html
+```

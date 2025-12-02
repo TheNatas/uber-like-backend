@@ -9,8 +9,8 @@ import java.util.Optional;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
-    Optional<Payment> findByIdAndUser(Long id, long userId);
-    boolean existsByNumberAndUser(String number, long userId);
+    Optional<Payment> findByIdAndPassenger_Id(Long id, Long passengerId);
+    boolean existsByNumberAndPassenger_Id(String number, Long passengerId);
 
     @Query("SELECT p FROM Payment p WHERE p.status = 'ACTIVATED' AND p.passenger.id = :userId")
     List<Payment> findAllActivatedByUserId(Long userId);

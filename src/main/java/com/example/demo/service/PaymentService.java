@@ -28,7 +28,10 @@ public class PaymentService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        boolean alreadyRegistered = paymentRepository.existsByNumberAndUser(creditCardDto.getNumber(), userId);
+        boolean alreadyRegistered = paymentRepository.existsByNumberAndPassenger_Id(
+                creditCardDto.getNumber(),
+                userId
+        );
         if (alreadyRegistered)
             throw new BadRequestException("Credit card already registered");
 
@@ -49,7 +52,7 @@ public class PaymentService {
     public Payment cancelPayment(Long paymentId, Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        Payment payment = paymentRepository.findByIdAndUser(paymentId, userId)
+        Payment payment = paymentRepository.findByIdAndPassenger_Id(paymentId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found"));
 
         payment.setStatus(PaymentStatus.CANCELLED);

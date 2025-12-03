@@ -1,5 +1,7 @@
 package com.example.demo.entity;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -9,6 +11,10 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+@JsonIdentityInfo(
+        generator = ObjectIdGenerators.PropertyGenerator.class,
+        property = "id"
+)
 @Entity
 @Table(name = "vehicles")
 @Data
@@ -69,6 +75,6 @@ public class Vehicle {
     }
     
     public enum VehicleType {
-        STANDARD, PREMIUM, SUV, ELECTRIC
+        STANDARD, PREMIUM, SUV, ELECTRIC, SEDAN
     }
 }

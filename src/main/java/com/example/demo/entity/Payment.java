@@ -5,11 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.example.demo.entity.enums.PaymentMethod;
 import com.example.demo.entity.enums.PaymentStatus;
 
 
@@ -27,7 +25,7 @@ public class Payment {
     private List<Ride> ride;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "passenger_id", nullable = false)
     private User passenger;
 
     @Column(name = "description")
